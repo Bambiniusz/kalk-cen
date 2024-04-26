@@ -168,10 +168,10 @@
 
         document.getElementById('priceOutput').textContent = `Całkowity Koszt: ${totalCost.toFixed(2)} PLN`;
         document.querySelector('.results').innerHTML = `
-            Breakdown:<br>
-            Product Type Cost: ${productTypeCost.toFixed(2)} PLN<br>
-            Material Cost: ${materialCost.toFixed(2)} PLN (for ${width}cm x ${depth}cm)<br>
-            Additional Costs: ${additionalCosts.toFixed(2)} PLN
+            Rozbicie cen:<br>
+            Typ Produktu: ${productTypeCost.toFixed(2)} PLN<br>
+            Materiały ${materialCost.toFixed(2)} PLN (for ${width}cm x ${depth}cm)<br>
+            Dodatkowe koszty: ${additionalCosts.toFixed(2)} PLN
         `;
     }
 
