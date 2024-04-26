@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Wprowadzania Danych dla Kalkulatora Cen</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0,0,0,.1);
+        }
+        input, select, button, table {
+            width: 100%;
+            padding: 8px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        .editable {
+            cursor: pointer;
+        }
+        a {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h2>Zarządzaj Danymi Cenowymi</h2>
+    <h3>Dodaj Typ Produktu</h3>
+    <form id="productTypeForm">
+        <input type="text" id="productTypeName" placeholder="Wpisz typ produktu (np. Szafa)">
+        <input type="number" id="productTypePrice" placeholder="Wpisz cenę bazową">
+        <button type="button" onclick="addProductType()">Dodaj Typ Produktu</button>
+    </form>
+    <table id="productTypesTable">
+        <tr>
+            <th>Nazwa</th>
+            <th>Cena</th>
+            <th>Akcje</th>
+        </tr>
+    </table>
+
+    <h3>Dodaj Materiał</h3>
+    <form id="materialForm">
+        <input type="text" id="materialName" placeholder="Wpisz rodzaj materiału">
+        <input type="number" id="materialPrice" placeholder="Wpisz cenę za metr kwadratowy">
+        <button type="button" onclick="addMaterial()">Dodaj Materiał</button>
+    </form>
+    <table id="materialsTable">
+        <tr>
+            <th>Nazwa</th>
+            <th>Cena</th>
+            <th>Akcje</th>
+        </tr>
+    </table>
+
+    <h3>Dodaj Dodatkowe Koszty</h3>
+    <form id="additionalCostsForm">
+        <input type="text" id="costName" placeholder="Wpisz nazwę kosztu (np. Wyposażenie, Praca, Transport)">
+        <input type="number" id="costPrice" placeholder="Wpisz cenę">
+        <button type="button" onclick="addCost()">Dodaj Koszt</button>
+    </form>
+    <table id="costsTable">
+        <tr>
+            <th>Nazwa</th>
+            <th>Cena</th>
+            <th>Akcje</th>
+        </tr>
+    </table>
+
+    <a href="price-calculator.html">Przejdź do Kalkulatora Cen</a>
+
+    <script>
+        let pricingData = JSON.parse(localStorage.getItem('pricingData')) || { productTypes: {}, materials: {}, costs: {} };
+
+        function addProductType() {
+            const name = document.getElementById('productTypeName').value.trim();
+            const price = parseFloat(document.getElementById('productTypePrice').value);
+            if (name && !isNaN(price)) {
+                pricingData.productTypes[name] = price;
+                updateLocalStorage();
+                renderProductTypes();
+            } else {
+                alert('Proszę wprowadzić prawidłową nazwę i cenę typu produktu.');
+            }
+        }
+
+        function addMaterial() {
+            const name = document.getElementById('materialName').value.trim();
+            const price = parseFloat(document.getElementById('materialPrice').value);
+            if (name && !isNaN(price)) {
+                pricingData.materials[name] = price;
+                updateLocalStorage();
+                renderMaterials();
+            } else {
+                alert('Proszę wprowadzić prawidłową nazwę i cenę materiału.');
+            }
+        }
+
+        function addCost() {
+            const name = document.getElementById('costName').value.trim();
+            const price = parseFloat(document.getElementById('costPrice').value);
+            if (name && !isNaN(price)) {
+                pricingData.costs[name] = price;
+                updateLocalStorage();
+                renderCosts();
+            } else {
+                alert('Proszę wprowadzić prawidłową nazwę i cenę kosztu.');
+            }
+        }
+
+        function updateEntry(type, name) {
+            const newPrice = parseFloat(prompt('Proszę wprowadzić nową cenę dla ' + name));
+            if (!isNaN(newPrice)) {
+                pricingData[type][name] = newPrice;
+                updateLocalStorage();
+                renderTable(type);
+            } else {
+                alert('Proszę wprowadzić prawidłową cenę.');
+            }
+        }
+
+        function deleteEntry(type, name) {
+            delete pricingData[type][name];
+            updateLocalStorage();
+            renderTable(type);
+        }
+
+        function updateLocalStorage() {
+            localStorage.setItem('pricingData', JSON.stringify(pricingData));
+        }
+
+        function renderProductTypes() {
+            renderTable('productTypes');
+        }
+
+        function renderMaterials() {
+            renderTable('materials');
+        }
+
+        function renderCosts() {
+            renderTable('costs');
+        }
+
+        function renderTable(type) {
+            const table = document.getElementById(`${type}Table`);
+            let rows = [];
+            Object.keys(pricingData[type]).forEach(name => {
+                rows.push(`<tr>
+                    <td>${name}</td>
+                    <td class="editable" onclick="updateEntry('${type}', '${name}')">${pricingData[type][name].toFixed(2)} PLN</td>
+                    <td><button onclick="deleteEntry('${type}', '${name}')">Usuń</button></td>
+                </tr>`);
+            });
+            table.innerHTML = `<tr>
+                <th>Nazwa</th>
+                <th>Cena</th>
+                <th>Akcje</th>
+            </tr>` + rows.join('');
+        }
+
+        window.onload = function() {
+            renderProductTypes();
+            renderMaterials();
+            renderCosts();
+        };
+    </script>
+</body>
+</html>

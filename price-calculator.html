@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Kalkulator Cen</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0,0,0,.1);
+        }
+        input, select, button, table {
+            padding: 8px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 100%;
+        }
+        .form-section {
+            display: flex;
+            justify-content: space-around;
+        }
+        .form-group {
+            flex: 1;
+            margin-right: 20px;
+        }
+        .form-group:last-child {
+            margin-right: 0;
+        }
+        .costs-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .costs-table th, .costs-table td {
+            text-align: left;
+            border-bottom: 1px solid #ccc;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        a {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h2>Kalkulator Cen</h2>
+    <form>
+        <label for="productType">Typ Produktu:</label>
+        <select id="productType"></select>
+
+        <label for="configuration">Konfiguracja:</label>
+        <select id="configuration"></select>
+
+        <label for="materialType">Materiał:</label>
+        <select id="materialType"></select>
+
+        <div class="form-section">
+            <div class="form-group">
+                <label for="width">Szerokość (cm):</label>
+                <input id="width" type="number">
+            </div>
+            <div class="form-group">
+                <label for="depth">Głębokość (cm):</label>
+                <input id="depth" type="number">
+            </div>
+            <div class="form-group">
+                <label for="height">Wysokość (cm):</label>
+                <input id="height" type="number">
+            </div>
+        </div>
+
+        <table class="costs-table" id="costTable">
+            <thead>
+                <tr>
+                    <th>Koszt</th>
+                    <th>Ilość</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+        <button type="button" onclick="calculatePrice()">Oblicz</button>
+    </form>
+
+    <div id="priceOutput">Całkowity Koszt: 0 PLN</div>
+    <div class="results"></div>
+
+    <a href="data-entry.html">Powrót do Panelu Wprowadzania Danych</a>
+
+    <script>
+    let pricingData = JSON.parse(localStorage.getItem('pricingData'));
+    let configurations = JSON.parse(localStorage.getItem('configurations'));
+    let components = JSON.parse(localStorage.getItem('components'));
+    let costQuantities = {}; // Store quantities persistently for additional costs
+
+    function populateDropdowns() {
+        populateDropdown('productType', Object.keys(pricingData.productTypes));
+        populateDropdown('configuration', Object.keys(configurations));
+        populateDropdown('materialType', Object.keys(pricingData.materials));
+        populateCostTable();
+    }
+
+    function populateDropdown(id, options) {
+        const select = document.getElementById(id);
+        select.innerHTML = '';
+        options.forEach(option => {
+            select.add(new Option(option, option));
+        });
+    }
+
+    function populateCostTable() {
+        const tbody = document.getElementById('costTable').querySelector('tbody');
+        tbody.innerHTML = '';
+        Object.keys(pricingData.costs).forEach(cost => {
+            costQuantities[cost] = 0; // Initialize quantity to 0
+            const row = tbody.insertRow();
+            const cellName = row.insertCell(0);
+            const cellQuantity = row.insertCell(1);
+
+            cellName.textContent = cost;
+            cellQuantity.innerHTML = `<input type='number' min='0' value='0' id='qty-${cost}' onchange='updateQuantity("${cost}")'>`;
+        });
+    }
+
+    function updateQuantity(cost) {
+        const input = document.getElementById(`qty-${cost}`);
+        costQuantities[cost] = parseFloat(input.value) || 0; // Update the quantity, not the price
+    }
+
+    function calculatePrice() {
+        let productTypeCost = pricingData.productTypes[document.getElementById('productType').value] || 0;
+        const materialType = document.getElementById('materialType').value;
+        const materialPrice = pricingData.materials[materialType] || 0;
+        let materialCost = 0;
+
+        const width = parseFloat(document.getElementById('width').value);
+        const depth = parseFloat(document.getElementById('depth').value);
+
+        const configName = document.getElementById('configuration').value;
+        if (configName && configurations[configName]) {
+            configurations[configName].forEach(({ component, quantity }) => {
+                const { widthPct, depthPct } = components[component];
+                let area = (width * (widthPct / 100)) * (depth * (depthPct / 100));
+                materialCost += (area / 10000) * materialPrice * quantity;
+            });
+        }
+
+        let additionalCosts = 0;
+        Object.keys(costQuantities).forEach(cost => {
+            additionalCosts += pricingData.costs[cost] * costQuantities[cost]; // Correctly calculate additional costs
+        });
+
+        let totalCost = productTypeCost + materialCost + additionalCosts;
+
+        document.getElementById('priceOutput').textContent = `Całkowity Koszt: ${totalCost.toFixed(2)} PLN`;
+        document.querySelector('.results').innerHTML = `
+            Breakdown:<br>
+            Product Type Cost: ${productTypeCost.toFixed(2)} PLN<br>
+            Material Cost: ${materialCost.toFixed(2)} PLN (for ${width}cm x ${depth}cm)<br>
+            Additional Costs: ${additionalCosts.toFixed(2)} PLN
+        `;
+    }
+
+    window.onload = populateDropdowns;
+    </script>
+</body>
+</html>

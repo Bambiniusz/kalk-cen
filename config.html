@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Zarządzanie Konfiguracjami</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0,0,0,.1);
+        }
+        input, select, button, table {
+            padding: 8px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 100%;
+        }
+        .form-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .form-row label,
+        .form-row input {
+            flex: 1;
+            margin-right: 10px;
+        }
+        .form-row input {
+            width: 50px; /* Smaller input box for percentages */
+        }
+        .form-row label:last-child,
+        .form-row input:last-child {
+            margin-right: 0;
+        }
+        table {
+            margin-top: 20px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ccc;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        a {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .configuration-table {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Zarządzanie Składnikami i Konfiguracjami</h2>
+
+    <!-- Add Component -->
+    <h3>Dodaj Składnik</h3>
+    <form id="addComponentForm">
+        <input type="text" id="componentName" placeholder="Nazwa składnika">
+        <select id="componentFormula" onchange="updatePercentageInputs()">
+            <option value="width*height">Szerokość * Wysokość</option>
+            <option value="width*depth">Szerokość * Głębokość</option>
+            <option value="height*depth">Wysokość * Głębokość</option>
+        </select>
+        <div class="form-row">
+            <label>Procent szerokości: <input type="number" id="widthPercentage" value="100"></label>
+            <label>Procent wysokości: <input type="number" id="heightPercentage" value="100"></label>
+            <label>Procent głębokości: <input type="number" id="depthPercentage" value="100"></label>
+        </div>
+        <button type="button" onclick="addComponent()">Dodaj Składnik</button>
+    </form>
+    <table id="componentsTable">
+        <thead>
+            <tr>
+                <th>Nazwa</th>
+                <th>Formuła</th>
+                <th>% Szerokości</th>
+                <th>% Wysokości</th>
+                <th>% Głębokości</th>
+                <th>Akcje</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <!-- Add Configuration -->
+    <h3>Tworzenie Nowej Konfiguracji</h3>
+    <form id="addConfigForm">
+        <input type="text" id="configName" placeholder="Nazwa konfiguracji">
+        <select id="configComponent"></select>
+        <input type="number" id="configQuantity" placeholder="Ilość">
+        <button type="button" onclick="addConfiguration()">Dodaj do Konfiguracji</button>
+    </form>
+    <div id="configurationDisplay"></div> <!-- Configuration display area -->
+
+    <script>
+    // Load from localStorage or initialize empty if not present
+    let components = JSON.parse(localStorage.getItem('components')) || {};
+    let configurations = JSON.parse(localStorage.getItem('configurations')) || {};
+
+    function addComponent() {
+        const name = document.getElementById('componentName').value;
+        const formula = document.getElementById('componentFormula').value;
+        const widthPct = parseInt(document.getElementById('widthPercentage').value, 10);
+        const heightPct = parseInt(document.getElementById('heightPercentage').value, 10);
+        const depthPct = parseInt(document.getElementById('depthPercentage').value, 10);
+        
+        components[name] = { formula, widthPct, heightPct, depthPct };
+        
+        // Save updated components to localStorage
+        localStorage.setItem('components', JSON.stringify(components));
+        
+        updateComponentDropdown();
+        populateComponentsTable();
+        alert('Składnik dodany');
+    }
+
+    function populateComponentsTable() {
+        const tbody = document.getElementById('componentsTable').querySelector('tbody');
+        tbody.innerHTML = '';
+        for (const [name, { formula, widthPct, heightPct, depthPct }] of Object.entries(components)) {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = name;
+            row.insertCell(1).textContent = formula;
+            row.insertCell(2).textContent = `${widthPct}%`;
+            row.insertCell(3).textContent = `${heightPct}%`;
+            row.insertCell(4).textContent = `${depthPct}%`;
+            const deleteCell = row.insertCell(5);
+            deleteCell.innerHTML = `<button onclick="deleteComponent('${name}')">Usuń</button>`;
+        }
+    }
+
+    function deleteComponent(name) {
+        delete components[name];
+        localStorage.setItem('components', JSON.stringify(components)); // Save updated components
+        updateComponentDropdown();
+        populateComponentsTable();
+    }
+
+    function updateComponentDropdown() {
+        const select = document.getElementById('configComponent');
+        select.innerHTML = '';
+        Object.keys(components).forEach(component => {
+            select.add(new Option(component, component));
+        });
+    }
+
+    function addConfiguration() {
+        const configName = document.getElementById('configName').value;
+        const selectedComponent = document.getElementById('configComponent').value;
+        const quantity = parseInt(document.getElementById('configQuantity').value, 10);
+
+        if (!configurations[configName]) configurations[configName] = [];
+        configurations[configName].push({ component: selectedComponent, quantity: quantity });
+
+        // Save updated configurations to localStorage
+        localStorage.setItem('configurations', JSON.stringify(configurations));
+        
+        populateConfigurationsDisplay();
+        alert('Konfiguracja dodana');
+    }
+
+    function populateConfigurationsDisplay() {
+        const display = document.getElementById('configurationDisplay');
+        display.innerHTML = ''; // Clear existing configurations display
+        Object.keys(configurations).forEach(configName => {
+            const table = document.createElement('table');
+            table.className = 'configuration-table';
+            table.innerHTML = `<thead><tr><th colspan="6">${configName}</th></tr><tr><th>Component</th><th>Formula</th><th>Width %</th><th>Height %</th><th>Depth %</th><th>Quantity</th><th>Actions</th></tr></thead>`;
+            const tbody = document.createElement('tbody');
+            configurations[configName].forEach(({ component, quantity }) => {
+                const { formula, widthPct, heightPct, depthPct } = components[component];
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = component;
+                row.insertCell(1).textContent = formula;
+                row.insertCell(2).textContent = `${widthPct}%`;
+                row.insertCell(3).textContent = `${heightPct}%`;
+                row.insertCell(4).textContent = `${depthPct}%`;
+                row.insertCell(5).textContent = quantity;
+                const cell = row.insertCell(6);
+                cell.innerHTML = `<button onclick="deleteConfiguration('${configName}', '${component}')">Delete</button>`;
+            });
+            table.appendChild(tbody);
+            display.appendChild(table);
+        });
+    }
+
+    function deleteConfiguration(configName, componentName) {
+        configurations[configName] = configurations[configName].filter(item => item.component !== componentName);
+        if (configurations[configName].length === 0) {
+            delete configurations[configName];
+        }
+        localStorage.setItem('configurations', JSON.stringify(configurations)); // Save updated configurations
+        populateConfigurationsDisplay();
+    }
+
+    function updatePercentageInputs() {
+        const formula = document.getElementById('componentFormula').value;
+        document.getElementById('widthPercentage').disabled = !formula.includes('width');
+        document.getElementById('heightPercentage').disabled = !formula.includes('height');
+        document.getElementById('depthPercentage').disabled = !formula.includes('depth');
+    }
+
+    window.onload = function() {
+        updateComponentDropdown();
+        updatePercentageInputs();
+        populateComponentsTable();
+        populateConfigurationsDisplay();
+    };
+    </script>
+
+    <a href="data-entry.html">Powrót do Panelu Wprowadzania Danych</a>
+    <a href="price-calculator.html">Przejdź do Kalkulatora Cen</a>
+</body>
+</html>
