@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Zarządzanie Konfiguracjami</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            font-size: 12px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,.1);
+            border-radius: 8px;
+        }
+        input, select, button, table {
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #0056b3;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background-color: #003d82;
+        }
+        .form-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .form-row label, .form-row input {
+            flex: 1;
+            margin-right: 10px;
+        }
+        .form-row input {
+            width: auto;
+        }
+        .form-row label:last-child, .form-row input:last-child {
+            margin-right: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ccc;
+            font-size: 14px; /* Smaller font size for cells */
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .configuration-table {
+            margin-bottom: 30px;
+        }
+        a {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 20px;
+            color: #4c6aaf;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Konfiguracje</h2>
+        <h3>Dodaj Komponent</h3>
+        <form id="addComponentForm">
+            <input type="text" id="componentName" placeholder="Nazwa składnika">
+            <select id="componentFormula" onchange="updatePercentageInputs()">
+                <option value="width*height">Szerokość * Wysokość</option>
+                <option value="width*depth">Szerokość * Głębokość</option>
+                <option value="height*depth">Wysokość * Głębokość</option>
+            </select>
+            <div class="form-row">
+                <label>Szer %: <input type="number" id="widthPercentage" value="100"></label>
+                <label>Wys %: <input type="number" id="heightPercentage" value="100"></label>
+                <label>Głęb %: <input type="number" id="depthPercentage" value="100"></label>
+            </div>
+            <button type="button" onclick="addComponent()">Dodaj Składnik</button>
+        </form>
+        <table id="componentsTable">
+            <thead>
+                <tr>
+                    <th>Nazwa</th>
+                    <th>Formuła</th>
+                    <th>% Szerokości</th>
+                    <th>% Wysokości</th>
+                    <th>% Głębokości</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+
+        <h3>Tworzenie Nowej Konfiguracji</h3>
+        <form id="addConfigForm">
+            <input type="text" id="configName" placeholder="Nazwa konfiguracji">
+            <select id="configComponent"></select>
+            <input type="number" id="configQuantity" placeholder="Ilość">
+            <button type="button" onclick="addConfiguration()">Dodaj do Konfiguracji</button>
+        </form>
+        <div id="configurationDisplay"></div> <!-- Configuration display area -->
+
+      
+        <a href="data-entry.html">Dane cenowe</a>
+        <a href="price-calculator.html">Kalkulator</a>
+        <a href="index.html">Główna</a>
+    </div>
+
+    <script>
+    // Load from localStorage or initialize empty if not present
+    let components = JSON.parse(localStorage.getItem('components')) || {};
+    let configurations = JSON.parse(localStorage.getItem('configurations')) || {};
+
+    function addComponent() {
+        const name = document.getElementById('componentName').value;
+        const formula = document.getElementById('componentFormula').value;
+        const widthPct = parseInt(document.getElementById('widthPercentage').value, 10);
+        const heightPct = parseInt(document.getElementById('heightPercentage').value, 10);
+        const depthPct = parseInt(document.getElementById('depthPercentage').value, 10);
+        
+        components[name] = { formula, widthPct, heightPct, depthPct };
+        
+        // Save updated components to localStorage
+        localStorage.setItem('components', JSON.stringify(components));
+        
+        updateComponentDropdown();
+        populateComponentsTable();
+        alert('Składnik dodany');
+    }
+
+    function populateComponentsTable() {
+        const tbody = document.getElementById('componentsTable').querySelector('tbody');
+        tbody.innerHTML = '';
+        for (const [name, { formula, widthPct, heightPct, depthPct }] of Object.entries(components)) {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = name;
+            row.insertCell(1).textContent = formula;
+            row.insertCell(2).textContent = `${widthPct}%`;
+            row.insertCell(3).textContent = `${heightPct}%`;
+            row.insertCell(4).textContent = `${depthPct}%`;
+            const deleteCell = row.insertCell(5);
+            deleteCell.innerHTML = `<button onclick="deleteComponent('${name}')">Usuń</button>`;
+        }
+    }
+
+    function deleteComponent(name) {
+        delete components[name];
+        localStorage.setItem('components', JSON.stringify(components)); // Save updated components
+        updateComponentDropdown();
+        populateComponentsTable();
+    }
+
+    function updateComponentDropdown() {
+        const select = document.getElementById('configComponent');
+        select.innerHTML = '';
+        Object.keys(components).forEach(component => {
+            select.add(new Option(component, component));
+        });
+    }
+
+    function addConfiguration() {
+        const configName = document.getElementById('configName').value;
+        const selectedComponent = document.getElementById('configComponent').value;
+        const quantity = parseInt(document.getElementById('configQuantity').value, 10);
+
+        if (!configurations[configName]) configurations[configName] = [];
+        configurations[configName].push({ component: selectedComponent, quantity: quantity });
+
+        // Save updated configurations to localStorage
+        localStorage.setItem('configurations', JSON.stringify(configurations));
+        
+        populateConfigurationsDisplay();
+        alert('Konfiguracja dodana');
+    }
+
+    function populateConfigurationsDisplay() {
+        const display = document.getElementById('configurationDisplay');
+        display.innerHTML = ''; // Clear existing configurations display
+        Object.keys(configurations).forEach(configName => {
+            const config = configurations[configName];
+        const numColumns = 7; // Make sure this number matches the actual columns
+            const table = document.createElement('table');
+            table.className = 'configuration-table';
+            table.innerHTML = `  <thead>
+                <tr><th colspan="${numColumns}">${configName}</th></tr>
+                <tr>
+                    <th>Komponent</th>
+                    <th>Formuła</th>
+                    <th>Szer %</th>
+                    <th>Wys %</th>
+                    <th>Głęb %</th>
+                    <th>Ilość</th>
+                    <th>Usuń</th>
+                </tr>
+            </thead>`;
+            const tbody = document.createElement('tbody');
+            configurations[configName].forEach(({ component, quantity }) => {
+                const { formula, widthPct, heightPct, depthPct } = components[component];
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = component;
+                row.insertCell(1).textContent = formula;
+                row.insertCell(2).textContent = `${widthPct}%`;
+                row.insertCell(3).textContent = `${heightPct}%`;
+                row.insertCell(4).textContent = `${depthPct}%`;
+                row.insertCell(5).textContent = quantity;
+                const cell = row.insertCell(6);
+                cell.innerHTML = `<button onclick="deleteConfiguration('${configName}', '${component}')">Delete</button>`;
+            });
+            table.appendChild(tbody);
+            display.appendChild(table);
+        });
+    }
+
+    function deleteConfiguration(configName, componentName) {
+        configurations[configName] = configurations[configName].filter(item => item.component !== componentName);
+        if (configurations[configName].length === 0) {
+            delete configurations[configName];
+        }
+        localStorage.setItem('configurations', JSON.stringify(configurations)); // Save updated configurations
+        populateConfigurationsDisplay();
+    }
+
+    function updatePercentageInputs() {
+        const formula = document.getElementById('componentFormula').value;
+        document.getElementById('widthPercentage').disabled = !formula.includes('width');
+        document.getElementById('heightPercentage').disabled = !formula.includes('height');
+        document.getElementById('depthPercentage').disabled = !formula.includes('depth');
+    }
+
+    window.onload = function() {
+        updateComponentDropdown();
+        updatePercentageInputs();
+        populateComponentsTable();
+        populateConfigurationsDisplay();
+    };
+    </script>
+
+    
+</body>
+</html>
